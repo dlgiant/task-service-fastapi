@@ -22,8 +22,8 @@ A high-performance task management API built with FastAPI, featuring idempotency
 
 1. **Clone the repository:**
 ```bash
-git clone <your-repo-url>
-cd eventual
+git clone https://github.com/dlgiant/task-service-fastapi 
+cd task-service-fastapi
 ```
 
 2. **Create a virtual environment:**
@@ -35,11 +35,6 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 3. **Install dependencies:**
 ```bash
 pip install -r requirements.txt
-```
-
-4. **Install the project in editable mode:**
-```bash
-pip install -e .
 ```
 
 ## Running the Application
@@ -101,70 +96,6 @@ pytest tests/test_tasks.py::test_idempotency_key -v
 | DELETE | `/tasks/{task_id}` | Delete a task |
 
 ## Usage Examples
-
-### Using cURL
-
-**Create a user:**
-```bash
-curl -X POST "http://localhost:8000/users" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "John Doe",
-    "email": "john@example.com",
-    "phone_number": "+1234567890"
-  }'
-```
-
-**Create a task with idempotency key:**
-```bash
-curl -X POST "http://localhost:8000/tasks" \
-  -H "Content-Type: application/json" \
-  -H "Idempotency-Key: unique-key-123" \
-  -d '{
-    "title": "Complete project report",
-    "status": "todo",
-    "due_date": "2025-12-31",
-    "user_id": 1
-  }'
-```
-
-**Get all tasks for a user:**
-```bash
-curl "http://localhost:8000/tasks?user_id=1"
-```
-
-**Filter tasks by status:**
-```bash
-curl "http://localhost:8000/tasks?status=todo"
-```
-
-### Using Python
-```python
-import requests
-
-BASE_URL = "http://localhost:8000"
-
-# Create a user
-user = requests.post(
-    f"{BASE_URL}/users",
-    json={"name": "Jane Doe", "email": "jane@example.com"}
-).json()
-
-# Create a task
-task = requests.post(
-    f"{BASE_URL}/tasks",
-    json={
-        "title": "Review code",
-        "status": "in_progress",
-        "due_date": "2025-11-15",
-        "user_id": user["id"]
-    },
-    headers={"Idempotency-Key": "review-code-001"}
-).json()
-
-print(f"Created task {task['id']} for user {user['name']}")
-```
-
 ### Using the Interactive API Docs
 
 1. Open http://localhost:8000/docs in your browser
@@ -257,50 +188,6 @@ You can override the database URL:
 export DATABASE_URL="sqlite+aiosqlite:///./custom.db"
 uvicorn app.main:app --reload
 ```
-
-## Development
-
-### Adding new dependencies:
-```bash
-pip install <package>
-pip freeze > requirements.txt
-```
-
-### Code style:
-```bash
-# Install dev dependencies
-pip install black isort flake8
-
-# Format code
-black app/ tests/
-isort app/ tests/
-
-# Lint
-flake8 app/ tests/
-```
-
-## Troubleshooting
-
-### "ModuleNotFoundError: No module named 'app'"
-- Make sure you have `__init__.py` files in `app/` and `tests/` directories
-- Run `pip install -e .` from the project root
-- Run pytest from the project root, not from the tests directory
-
-### Tests fail with database errors
-- Delete `test_taskdb.db` if it exists
-- Make sure `aiosqlite` is installed: `pip install aiosqlite`
-
-### Port already in use
-- Kill the process using port 8000: `lsof -ti:8000 | xargs kill -9` (Mac/Linux)
-- Or use a different port: `uvicorn app.main:app --port 8080 --reload`
-
-## Performance Notes
-
-- Uses async SQLAlchemy for non-blocking I/O
-- Includes database indexes on frequently queried fields
-- Uses `selectinload` to prevent N+1 queries when fetching tasks with users
-- Idempotency keys are indexed for fast lookups
-
 ## License
 
 MIT

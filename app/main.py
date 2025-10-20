@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException, Header, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
-from typing import List, Optional
+from typing import List, Optional, Literal
 from contextlib import asynccontextmanager
 from app import crud, schemas
 from app.database import get_db, init_db
@@ -66,7 +66,6 @@ async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="User not found")
 
 
-# Task endpoints
 @app.post("/tasks", response_model=schemas.TaskResponse, status_code=201)
 async def create_task(
     task: schemas.TaskCreate,
@@ -78,16 +77,28 @@ async def create_task(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except IntegrityError:
-        raise HTTPException(status_code=400,
-                            detail="Idempotency key already used")
+        raise HTTPException(
+            status_code=400,
+            detail="Idempotency key already used"
+        )
 
 
 @app.get("/tasks", response_model=List[schemas.TaskResponse])
 async def list_tasks(
     skip: int = 0,
     limit: int = 100,
-    user_id: Optional[int] = Query(None),
-    status: Optional[TaskStatus] = Query(None),
+    user_id: Optional[int] = Query(
+        None,
+        description="Filter by user ID"
+    ),
+    status: Optional[TaskStatus] = Query(
+        None,
+        description="Filter by task status"
+    ),
+    order_by: Optional[Literal["asc", "desc"]] = Query(
+        None,
+        description="Order by due_date (asc or desc)"
+    ),
     db: AsyncSession = Depends(get_db)
 ):
     return await crud.get_tasks(
@@ -95,8 +106,21 @@ async def list_tasks(
         skip=skip,
         limit=limit,
         user_id=user_id,
-        status=status
+        status=status,
+        order_by=order_by
     )
+
+
+@app.get("/tasks/summary", response_model=schemas.TaskSummary)
+async def get_tasks_summary(
+    user_id: Optional[int] = Query(
+        None,
+        description="Filter summary by user ID"
+    ),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get count of tasks grouped by status"""
+    return await crud.get_tasks_summary(db, user_id=user_id)
 
 
 @app.get("/tasks/{task_id}", response_model=schemas.TaskWithUser)

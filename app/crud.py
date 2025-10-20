@@ -1,9 +1,9 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func as sql_func
 from sqlalchemy.orm import selectinload
 from app.models import Task, User, TaskStatus
 from app.schemas import TaskCreate, TaskUpdate, UserCreate, UserUpdate
-from typing import Optional, List
+from typing import Optional, List, Literal
 
 
 async def get_user(db: AsyncSession, user_id: int) -> Optional[User]:
@@ -79,6 +79,7 @@ async def get_tasks(
     limit: int = 100,
     user_id: Optional[int] = None,
     status: Optional[TaskStatus] = None,
+    order_by: Optional[Literal["asc", "desc"]] = None,
     include_user: bool = False
 ) -> List[Task]:
     query = select(Task)
@@ -87,6 +88,12 @@ async def get_tasks(
         query = query.where(Task.user_id == user_id)
     if status:
         query = query.where(Task.status == status)
+
+    if order_by == "asc":
+        query = query.order_by(Task.due_date.asc().nulls_last())
+    elif order_by == "desc":
+        query = query.order_by(Task.due_date.desc().nulls_last())
+
     if include_user:
         query = query.options(selectinload(Task.user))
 
@@ -100,18 +107,15 @@ async def create_task(
     task: TaskCreate,
     idempotency_key: Optional[str] = None
 ) -> Task:
-    # Check idempotency key
     if idempotency_key:
         existing = await get_task_by_idempotency_key(db, idempotency_key)
         if existing:
             return existing
 
-    # Verify user exists
     user = await get_user(db, task.user_id)
     if not user:
         raise ValueError(f"User {task.user_id} not found")
 
-    # Create task
     task_data = task.model_dump()
     db_task = Task(**task_data, idempotency_key=idempotency_key)
     db.add(db_task)
@@ -156,3 +160,27 @@ async def get_task_by_idempotency_key(
         select(Task).where(Task.idempotency_key == key)
     )
     return result.scalar_one_or_none()
+
+
+async def get_tasks_summary(
+    db: AsyncSession,
+    user_id: Optional[int] = None
+) -> dict:
+    """Get count of tasks per status"""
+    query = select(
+        Task.status,
+        sql_func.count(Task.id).label('count')
+    ).group_by(Task.status)
+
+    if user_id:
+        query = query.where(Task.user_id == user_id)
+
+    result = await db.execute(query)
+    status_counts = {status: count for status, count in result.all()}
+
+    return {
+        "pending": status_counts.get(TaskStatus.PENDING, 0),
+        "in_progress": status_counts.get(TaskStatus.IN_PROGRESS, 0),
+        "done": status_counts.get(TaskStatus.DONE, 0),
+        "total": sum(status_counts.values())
+    }

@@ -28,7 +28,7 @@ class UserResponse(UserBase):
 
 class TaskBase(BaseModel):
     title: str
-    status: TaskStatus = TaskStatus.TODO
+    status: TaskStatus = TaskStatus.PENDING
     due_date: Optional[date] = None
 
 
@@ -54,3 +54,10 @@ class TaskResponse(TaskBase):
 class TaskWithUser(TaskResponse):
     user: UserResponse
     model_config = ConfigDict(from_attributes=True)
+
+
+class TaskSummary(BaseModel):
+    pending: int
+    in_progress: int
+    done: int
+    total: int

@@ -16,7 +16,7 @@ Base = declarative_base()
 
 
 class TaskStatus(str, enum.Enum):
-    TODO = "todo"
+    PENDING = "pending"
     IN_PROGRESS = "in_progress"
     DONE = "done"
 
@@ -42,7 +42,11 @@ class Task(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False)
-    status = Column(Enum(TaskStatus), default=TaskStatus.TODO, nullable=False)
+    status = Column(
+        Enum(TaskStatus),
+        default=TaskStatus.PENDING,
+        nullable=False
+    )
     due_date = Column(Date, nullable=True)
     idempotency_key = Column(String, unique=True, nullable=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
