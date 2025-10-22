@@ -1,8 +1,9 @@
 from sqlalchemy.ext.asyncio import (
-    create_async_engine,
     AsyncSession,
-    async_sessionmaker
+    async_sessionmaker,
+    create_async_engine
 )
+
 from app.models import Base
 
 DATABASE_URL = "sqlite+aiosqlite:///./taskdb.db"
@@ -10,13 +11,11 @@ DATABASE_URL = "sqlite+aiosqlite:///./taskdb.db"
 engine = create_async_engine(
     DATABASE_URL,
     echo=True,
-    connect_args={"check_same_thread": False}  # SQLite specific
+    connect_args={"check_same_thread": False},  # SQLite specific
 )
 
 AsyncSessionLocal = async_sessionmaker(
-    engine,
-    expire_on_commit=False,
-    class_=AsyncSession
+    engine, expire_on_commit=False, class_=AsyncSession
 )
 
 

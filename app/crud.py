@@ -3,15 +3,15 @@ from sqlalchemy import select, func as sql_func
 from sqlalchemy.orm import selectinload
 from app.models import Task, User, TaskStatus
 from app.schemas import TaskCreate, TaskUpdate, UserCreate, UserUpdate
-from typing import Optional, List, Literal
+from typing import List, Literal, Union
 
 
-async def get_user(db: AsyncSession, user_id: int) -> Optional[User]:
+async def get_user(db: AsyncSession, user_id: int) -> Union[User, None]:
     result = await db.execute(select(User).where(User.id == user_id))
     return result.scalar_one_or_none()
 
 
-async def get_user_by_email(db: AsyncSession, email: str) -> Optional[User]:
+async def get_user_by_email(db: AsyncSession, email: str) -> Union[User, None]:
     result = await db.execute(select(User).where(User.email == email))
     return result.scalar_one_or_none()
 
@@ -34,10 +34,8 @@ async def create_user(db: AsyncSession, user: UserCreate) -> User:
 
 
 async def update_user(
-    db: AsyncSession,
-    user_id: int,
-    user_update: UserUpdate
-) -> Optional[User]:
+    db: AsyncSession, user_id: int, user_update: UserUpdate
+) -> Union[User, None]:
     db_user = await get_user(db, user_id)
     if not db_user:
         return None
@@ -62,10 +60,8 @@ async def delete_user(db: AsyncSession, user_id: int) -> bool:
 
 
 async def get_task(
-    db: AsyncSession,
-    task_id: int,
-    include_user: bool = False
-) -> Optional[Task]:
+    db: AsyncSession, task_id: int, include_user: bool = False
+) -> Union[Task, None]:
     query = select(Task).where(Task.id == task_id)
     if include_user:
         query = query.options(selectinload(Task.user))
@@ -77,10 +73,10 @@ async def get_tasks(
     db: AsyncSession,
     skip: int = 0,
     limit: int = 100,
-    user_id: Optional[int] = None,
-    status: Optional[TaskStatus] = None,
-    order_by: Optional[Literal["asc", "desc"]] = None,
-    include_user: bool = False
+    user_id: Union[int, None] = None,
+    status: Union[TaskStatus, None] = None,
+    order_by: Union[Literal["asc", "desc"], None] = None,
+    include_user: bool = False,
 ) -> List[Task]:
     query = select(Task)
 
@@ -105,7 +101,7 @@ async def get_tasks(
 async def create_task(
     db: AsyncSession,
     task: TaskCreate,
-    idempotency_key: Optional[str] = None
+    idempotency_key: Union[str, None] = None
 ) -> Task:
     if idempotency_key:
         existing = await get_task_by_idempotency_key(db, idempotency_key)
@@ -125,10 +121,8 @@ async def create_task(
 
 
 async def update_task(
-    db: AsyncSession,
-    task_id: int,
-    task_update: TaskUpdate
-) -> Optional[Task]:
+    db: AsyncSession, task_id: int, task_update: TaskUpdate
+) -> Union[Task, None]:
     db_task = await get_task(db, task_id)
     if not db_task:
         return None
@@ -155,21 +149,19 @@ async def delete_task(db: AsyncSession, task_id: int) -> bool:
 async def get_task_by_idempotency_key(
     db: AsyncSession,
     key: str
-) -> Optional[Task]:
-    result = await db.execute(
-        select(Task).where(Task.idempotency_key == key)
-    )
+) -> Union[Task, None]:
+    result = await db.execute(select(Task).where(Task.idempotency_key == key))
     return result.scalar_one_or_none()
 
 
 async def get_tasks_summary(
     db: AsyncSession,
-    user_id: Optional[int] = None
+    user_id: Union[int, None] = None
 ) -> dict:
     """Get count of tasks per status"""
     query = select(
         Task.status,
-        sql_func.count(Task.id).label('count')
+        sql_func.count(Task.id).label("count")
     ).group_by(Task.status)
 
     if user_id:
@@ -182,5 +174,18 @@ async def get_tasks_summary(
         "pending": status_counts.get(TaskStatus.PENDING, 0),
         "in_progress": status_counts.get(TaskStatus.IN_PROGRESS, 0),
         "done": status_counts.get(TaskStatus.DONE, 0),
-        "total": sum(status_counts.values())
+        "total": sum(status_counts.values()),
     }
+
+async def get_task_type(
+    db: AsyncSession,
+    user_id: Union[int, None] = None,
+    task_type: TaskStatus = TaskStatus.PENDING
+) -> list:
+    query = select(Task).where(Task.status == task_type)
+    
+    if user_id:
+        query = query.where(Task.user_id == user_id)
+
+    result = await db.execute(query)
+    return list(result.scalars().all())

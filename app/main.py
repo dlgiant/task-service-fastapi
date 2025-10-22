@@ -1,8 +1,10 @@
-from fastapi import FastAPI, Depends, HTTPException, Header, Query
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.exc import IntegrityError
-from typing import List, Optional, Literal
 from contextlib import asynccontextmanager
+from typing import List, Literal, Optional
+
+from fastapi import Depends, FastAPI, Header, HTTPException, Query
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app import crud, schemas
 from app.database import get_db, init_db
 from app.models import TaskStatus
@@ -12,6 +14,7 @@ from app.models import TaskStatus
 async def lifespan(app: FastAPI):
     await init_db()
     yield
+
 
 app = FastAPI(title="Task CRUD API", lifespan=lifespan)
 
@@ -29,9 +32,7 @@ async def create_user(
 
 @app.get("/users", response_model=List[schemas.UserResponse])
 async def list_users(
-    skip: int = 0,
-    limit: int = 100,
-    db: AsyncSession = Depends(get_db)
+    skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)
 ):
     return await crud.get_users(db, skip=skip, limit=limit)
 
@@ -70,7 +71,7 @@ async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
 async def create_task(
     task: schemas.TaskCreate,
     db: AsyncSession = Depends(get_db),
-    idempotency_key: Optional[str] = Header(None, alias="Idempotency-Key")
+    idempotency_key: Optional[str] = Header(None, alias="Idempotency-Key"),
 ):
     try:
         return await crud.create_task(db, task, idempotency_key)
@@ -87,19 +88,15 @@ async def create_task(
 async def list_tasks(
     skip: int = 0,
     limit: int = 100,
-    user_id: Optional[int] = Query(
-        None,
-        description="Filter by user ID"
-    ),
+    user_id: Optional[int] = Query(None, description="Filter by user ID"),
     status: Optional[TaskStatus] = Query(
         None,
         description="Filter by task status"
     ),
     order_by: Optional[Literal["asc", "desc"]] = Query(
-        None,
-        description="Order by due_date (asc or desc)"
+        None, description="Order by due_date (asc or desc)"
     ),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     return await crud.get_tasks(
         db,
@@ -117,7 +114,7 @@ async def get_tasks_summary(
         None,
         description="Filter summary by user ID"
     ),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """Get count of tasks grouped by status"""
     return await crud.get_tasks_summary(db, user_id=user_id)

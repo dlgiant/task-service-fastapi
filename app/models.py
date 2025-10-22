@@ -1,16 +1,17 @@
+import enum
+
 from sqlalchemy import (
     Column,
-    Integer,
-    String,
-    DateTime,
     Date,
-    ForeignKey,
+    DateTime,
     Enum,
-    Index
+    ForeignKey,
+    Index,
+    Integer,
+    String
 )
-from sqlalchemy.orm import relationship, declarative_base
+from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.sql import func
-import enum
 
 Base = declarative_base()
 
@@ -56,6 +57,6 @@ class Task(Base):
     user = relationship("User", back_populates="tasks")
 
     __table_args__ = (
-        Index('idx_user_status', 'user_id', 'status'),
-        Index('idx_due_date', 'due_date'),
+        Index("idx_user_status", "user_id", "status"),
+        Index("idx_due_date", "due_date"),
     )

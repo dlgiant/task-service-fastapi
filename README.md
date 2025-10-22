@@ -122,7 +122,7 @@ pytest tests/test_tasks.py::test_idempotency_key -v
 {
   "id": 1,
   "title": "Complete project",
-  "status": "todo",
+  "status": "pending",
   "due_date": "2025-12-31",
   "user_id": 1,
   "idempotency_key": "unique-key-123",
@@ -132,7 +132,7 @@ pytest tests/test_tasks.py::test_idempotency_key -v
 ```
 
 ### Task Statuses
-- `todo` - Task not started
+- `pending` - Task not started
 - `in_progress` - Task in progress
 - `done` - Task completed
 
